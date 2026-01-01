@@ -1,0 +1,6 @@
+@S3WebApi_HostAddress = http://localhost:5039
+
+GET {{S3WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

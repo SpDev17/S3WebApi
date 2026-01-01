@@ -120,6 +120,7 @@ public class LaunchDarklyRepository : IFeatureFlagDataPort
 
     private bool EnsureInitialised<T>(string featureName, T defaultValue)
     {
+        /*
         if (_ldClient == null)
         {
             Console.WriteLine(
@@ -139,6 +140,7 @@ public class LaunchDarklyRepository : IFeatureFlagDataPort
                 return false;
             }
         }
+        */
 
         return true;
     }

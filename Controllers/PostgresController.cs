@@ -312,7 +312,7 @@ namespace S3WebApi.Controllers
                 }
 
                 string siteUrl = request.SiteURL + request.Client_ID;
-                // string siteUrl = "https://devmmcglobal.sharepoint.com/sites/MRSH-MShareDev-INST-GB001/" + request.ClientID;
+                // string siteUrl = "https://yddr5.sharepoint.com/sites/MRSH-MShareDev-INST-GB001/" + request.ClientID;
                 List<SPGroupResponse> resultPermission = await _sharePointService.GetSPGroupList(siteUrl, request.Email_ID);
 
                 if (resultPermission is not null && resultPermission?.Count > 0)

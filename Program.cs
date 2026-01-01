@@ -28,6 +28,8 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.WithProperty("Env", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").ToLower())
     .Enrich.FromLogContext());
 
+
+
 // Access configuration 
 var configuration = builder.Configuration;
 
@@ -39,7 +41,8 @@ var authSecret = new AuthSecret
     Certificates = new Dictionary<string, string>()
 };
 
-//testing new setup 
+//testing new setup
+isEKS=true;
 if (isEKS)
 {
     // Step 1: Retrieve the JSON blob from the environment variable
@@ -245,7 +248,7 @@ builder.Services.AddSwaggerGen(c =>
                     {
                         new OpenApiObject
                         {
-                            {"url", new OpenApiString("https://dev.emea.msharearchiveservices.mrshmc.com")},
+                            {"url", new OpenApiString("http://localhost:5000")},
                             {"description", new OpenApiString("DEV Apigee endpoint")}
                         },
                         //new OpenApiObject
