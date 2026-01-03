@@ -68,7 +68,7 @@ namespace S3WebApi.Repository
             s3Config = new AmazonS3Config
             {
                 RegionEndpoint = RegionEndpoint.GetBySystemName(_settings.Region),
-                ServiceURL = vpceUrl
+                //ServiceURL = vpceUrl
             };
             _s3Client = new AmazonS3Client(sessionAwsCreds, s3Config);
             #endregion
@@ -118,7 +118,7 @@ namespace S3WebApi.Repository
                 s3Config = new AmazonS3Config
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(_settings.Region),
-                    ServiceURL = vpceUrl
+                    //ServiceURL = vpceUrl
                 };
                 using var s3 = new AmazonS3Client(sessionAwsCreds, s3Config);
 
@@ -224,7 +224,7 @@ namespace S3WebApi.Repository
                 s3Config = new AmazonS3Config
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(_settings.Region),
-                    ServiceURL = vpceUrl
+                    //ServiceURL = vpceUrl
                 };
                 _logger.AddMethodName().Information("s3Config object is created");
 
@@ -318,7 +318,7 @@ namespace S3WebApi.Repository
                 s3Config = new AmazonS3Config
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(_settings.Region),
-                    ServiceURL = vpceUrl
+                    //ServiceURL = vpceUrl
                 };
 
                 using var s3 = new AmazonS3Client(sessionAwsCreds, s3Config);

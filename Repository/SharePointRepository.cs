@@ -110,7 +110,6 @@ namespace S3WebApi.Repository
                     foreach (var ItemResult in listItem.Value)
                     {
                         string metadataJson = string.Empty;
-
                         // Handle raw object-to-JSON safely
                         var dictionary = new Dictionary<string, object>();
 
@@ -138,6 +137,7 @@ namespace S3WebApi.Repository
                         };
 
                         // Object Metadata to Json
+                        dictionary["ContentType"] = contentType;
                         metadataJson = JsonSerializer.Serialize(dictionary, options);
 
                         var permissions = await _graphClient.SpoInstance(contextUrl)
@@ -236,6 +236,7 @@ namespace S3WebApi.Repository
                     };
 
                     // Object Metadata to Json
+                    dictionary["ContentType"] = contentType;
                     metadataJson = JsonSerializer.Serialize(dictionary, options);
 
                     var permissions = await _graphClient.SpoInstance(contextUrl)

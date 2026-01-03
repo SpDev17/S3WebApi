@@ -1,0 +1,67 @@
+﻿{
+    "profiles": {
+        "dev": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "dev"
+            },
+            "applicationUrl": "http://localhost:8080/"
+        },
+        "qa": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "qa"
+            },
+            "applicationUrl": "http://localhost:8080/"
+        },
+        "uat": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "uat"
+            },
+            "applicationUrl": "http://localhost:8080/"
+        },
+        "prod": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "prod"
+            },
+            "applicationUrl": "http://localhost:8080/"
+        },
+        "perf": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "perf"
+            },
+            "applicationUrl": "http://localhost:8080/"
+        },
+        "production": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "production"
+            },
+            "applicationUrl": "http://localhost:8080/"
+        }
+    },
+    "$schema": "http://json.schemastore.org/launchsettings.json",
+    "iisSettings": {
+        "windowsAuthentication": false,
+        "anonymousAuthentication": true,
+        "iisExpress": {
+            "applicationUrl": "http://localhost:60013",
+            "sslPort": 44350
+        }
+    }
+}

@@ -248,7 +248,7 @@ builder.Services.AddSwaggerGen(c =>
                     {
                         new OpenApiObject
                         {
-                            {"url", new OpenApiString("http://localhost:5000")},
+                            {"url", new OpenApiString("http://localhost:8080")},
                             {"description", new OpenApiString("DEV Apigee endpoint")}
                         },
                         //new OpenApiObject

@@ -50,7 +50,7 @@ public class Archive
                 i++;
             }
 
-            file = file+Path.GetFileName(doc.FullPath); ;
+            file = file + Path.GetFileName(doc.FullPath); ;
 
             bool InstitutionLibraryFilter = Enum.IsDefined(typeof(InstitutionLibrary), val);
             string res = string.Empty;
@@ -82,7 +82,7 @@ public class Archive
                     break;
                 default:
                     await _postgresService.UpdateArchiveQueueStatusByIdAsync(doc.id, "The requested resource library was not found", "Failed");
-                    throw new HttpStatusCodeException(404, "The requested resource library was not found.");                    
+                    throw new HttpStatusCodeException(404, "The requested resource library was not found.");
             }
             await _postgresService.UpdateArchiveQueueStatusByIdAsync(doc.id, "", "Success");
             return res;
@@ -145,7 +145,7 @@ public class Archive
                         mData.VersionId = metadataResponse.VersionId;
                         mData.IsPublishedVersion = index == 0 ? true : false;
                         mData.PublishedObjectId = index == 0 ? null : mDataList[(int)mDataList.Count() - 1].ObjectID;
-                            
+
                         var res = await _postgresService.InsertDataAsync(mData);
                         if (res <= NoResult)
                         {
@@ -183,12 +183,12 @@ public class Archive
                 {
                     //----------------------File Upload--------------------------------------------------
                     string docModifiedDate = string.Empty; // latestVersion.LastModifiedDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? null;
-                    metadataResponse =  await _objectStorageService.UploadObjectAsync(fileStm, country + "/" + clientId + "/" + location + "/" + file, doc.FullPath, docModifiedDate);
+                    metadataResponse = await _objectStorageService.UploadObjectAsync(fileStm, country + "/" + clientId + "/" + location + "/" + file, doc.FullPath, docModifiedDate);
                     _logger.AddMethodName().Information("File {0} uploaded.", name);
 
                     var mData = mDataList[mDataList.Count() - 1];
                     mData.VersionId = metadataResponse.VersionId;
-                    mData.IsPublishedVersion = true ;
+                    mData.IsPublishedVersion = true;
                     mData.PublishedObjectId = null;
 
                     var res = await _postgresService.InsertDataAsync(mData);
@@ -202,7 +202,7 @@ public class Archive
                     if (DeleteSource)
                     {
                         var chk = await _objectStorageService.ExistObjectAsync(country + "/" + clientId + "/" + location + "/" + file);
-                        if(chk)
+                        if (chk)
                         {
                             var delRes = await _sharePointService.SoftDeleteDocument(clientSite, library, doc.FullPath, location, name);
                             if (!delRes)
@@ -213,7 +213,7 @@ public class Archive
                         }
                     }
                 }
-                
+
             }
 
             return "document is uploaded";

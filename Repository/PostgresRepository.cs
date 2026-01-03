@@ -24,7 +24,7 @@ namespace S3WebApi.Repository
             _settings = configuration.GetSection("ConnectionStrings").Get<PostgresConnection>();
             _authSecret.Certificates.TryGetValue(_settings.PostgreSqlConnection, out var _connectionStrings);
             _connectionString = _connectionStrings;
-            _connectionString = "Host=10.178.164.102;Port=5432;Database=mshareArchivalDB;Username=postgres;Password=mmc@123";
+            //_connectionString = "Host=10.178.164.102;Port=5432;Database=mshareArchivalDB;Username=postgres;Password=mmc@123";
         }
 
         private IDbConnection Connection => new NpgsqlConnection(_connectionString);
