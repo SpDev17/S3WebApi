@@ -1,9 +1,3 @@
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using S3WebApi.Helpers;
-
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using S3WebApi.Helpers;
 
@@ -15,6 +9,7 @@ namespace S3WebApi.Models
         public string Client_ID { get; set; }
 
         [Required(ErrorMessage = "Email_ID is required.")]
+        [EmailValidate(ErrorMessage = "Please enter a valid email address.")]
         public string Email_ID { get; set; }
 
         [Required(ErrorMessage = "From Date is required.")]
@@ -29,10 +24,12 @@ namespace S3WebApi.Models
         public List<Conditions> Conditions { get; set; }
 
         [Required(ErrorMessage = "Page no is required.")]
-        public string PageNo {get; set;}
+        [Range(1, int.MaxValue, ErrorMessage = "Page no value must be at least 1.")]
+        public int PageNo {get; set;}
 
         [Required(ErrorMessage = "Limit is required.")]
-        public string Limit {get; set;}
+        [Range(1, int.MaxValue, ErrorMessage = "Limit value must be at least 1.")]
+        public int Limit {get; set;}
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
@@ -46,7 +43,7 @@ namespace S3WebApi.Models
             {
                 if (fromDateValue > toDateValue)
                 {
-                    yield return new ValidationResult("ToDate should not be greater than FromDate.", new[] { nameof(ToDate), nameof(FromDate) });
+                    yield return new ValidationResult("ToDate should be greater than FromDate.", new[] { nameof(ToDate), nameof(FromDate) });
                 }
             }
         }

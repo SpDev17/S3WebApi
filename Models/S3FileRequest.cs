@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using S3WebApi.Helpers;
 
 namespace S3WebApi.Models;
 
@@ -8,8 +9,14 @@ public class S3FileRequest
     [MinLength(1, ErrorMessage = "Country cannot be empty.")]
     [RegularExpression(@"\S+", ErrorMessage = "Country cannot be whitespace.")]
     public string Country { get; set; }
+
+    [Required(ErrorMessage = "Urls are required.")]
     public List<string> Urls { get; set; }
+
+    [Required(ErrorMessage = "LimitVersion is required.")]
     public bool LimitVersion { get; set; }
+
+    [Required(ErrorMessage = "DeleteSource is required.")]
     public bool DeleteSource { get; set; }
 }
 
@@ -31,5 +38,6 @@ public class FileDownloadRequest
     public string BucketName { get; set; }
 
     [Required(ErrorMessage = "Email_ID is required.")]
+    [EmailValidate(ErrorMessage = "Please enter a valid email address.")]
     public string Email_ID { get; set; }
 }

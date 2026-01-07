@@ -140,8 +140,7 @@ public class LaunchDarklyRepository : IFeatureFlagDataPort
                 return false;
             }
         }
-        */
-
+*/
         return true;
     }
 }

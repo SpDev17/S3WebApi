@@ -27,5 +27,6 @@ namespace S3WebApi.Interfaces
 
         Task<bool> SoftDeleteDocument(string contextUrl, InstitutionLibrary library, string itemPath, string location, string item);
         
+        Task<string> StartArchive(ArchiveQueueDetails_Item doc, string country, bool limitVersion, bool deleteSource);
     }
 }

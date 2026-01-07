@@ -425,7 +425,7 @@ public class DMSAuthOperation : IDMSAuthOperation
                 .Replace(" ", string.Empty));
 
         var cert = new X509Certificate2(data, privateKeyValue);
-        //"https://yddr5.sharepoint.com/.default"
+        //"https://devmmcglobal.sharepoint.com/.default"
         //"https://graph.microsoft.com/.default"
         if (string.IsNullOrEmpty(scope))
         {

@@ -16,6 +16,8 @@ using System.Net.Http.Headers;
 using System.Net;
 using Constants = S3WebApi.GlobalLayer.Constants;
 using S3WebApi.Helpers;
+using Amazon.S3.Model;
+using S3WebApi.Models.Docs;
 
 namespace S3WebApi.Repository
 {
@@ -26,6 +28,7 @@ namespace S3WebApi.Repository
         private readonly GraphClient _graphClient;
         private readonly ISiteRepository _siteRepository;
         private readonly IPostgresRepository _postgresRepository;
+        private readonly IS3Repository _s3Repository;
         private readonly AssumeRoleRequestDto _settings;
         private readonly AuthSecret _authSecret;
         private readonly IDMSAuthOperation _dMSAuthOperation;
@@ -43,11 +46,12 @@ namespace S3WebApi.Repository
             IConfiguration configuration,
             AuthSecret authSecret,
             IPostgresRepository postgresRepository,
+            IS3Repository s3Repository,
             IDMSAuthOperation dMSAuthOperation, IDMSAuthOperation authenticationProvider)
         {
             _siteRepository = siteRepository ?? throw new ArgumentNullException(nameof(siteRepository));
             _graphClient = graphClient ?? throw new ArgumentNullException(nameof(graphClient));
-            // _s3Services = s3Services;
+            _s3Repository = s3Repository;
             _postgresRepository = postgresRepository;
             _settings = configuration.GetSection("AwsS3PVCSettings").Get<AssumeRoleRequestDto>();
             _authSecret = authSecret;
@@ -110,6 +114,7 @@ namespace S3WebApi.Repository
                     foreach (var ItemResult in listItem.Value)
                     {
                         string metadataJson = string.Empty;
+
                         // Handle raw object-to-JSON safely
                         var dictionary = new Dictionary<string, object>();
 
@@ -135,9 +140,9 @@ namespace S3WebApi.Repository
                         {
                             WriteIndented = true
                         };
+                        dictionary["ContentType"] = contentType;
 
                         // Object Metadata to Json
-                        dictionary["ContentType"] = contentType;
                         metadataJson = JsonSerializer.Serialize(dictionary, options);
 
                         var permissions = await _graphClient.SpoInstance(contextUrl)
@@ -234,9 +239,9 @@ namespace S3WebApi.Repository
                     {
                         WriteIndented = true
                     };
+                    dictionary["ContentType"] = contentType;
 
                     // Object Metadata to Json
-                    dictionary["ContentType"] = contentType;
                     metadataJson = JsonSerializer.Serialize(dictionary, options);
 
                     var permissions = await _graphClient.SpoInstance(contextUrl)
@@ -998,6 +1003,208 @@ namespace S3WebApi.Repository
                 _logger.Error("SoftDelete with contextUrl: {ContextUrl}, itemPath: {ItemPath} failed :: {msg}", contextUrl, itemPath, ex.Message);
                 throw new Exception($"'{itemPath}' :: File not deletes");
             }
-        }        
+        }
+
+        public async Task<string> StartArchive(ArchiveQueueDetails_Item doc, string country, bool LimitVersion, bool DeleteSource)
+        {
+            try
+            {
+                Uri uri = new Uri(doc.FullPath);
+                _logger.AddMethodName().Information("Starting Archive {url}", doc.FullPath);
+                string[] segments = uri.Segments;
+                string val = segments[4].Replace("%20", "");
+                var clientId = segments[3].Replace("/", "");
+                string location = segments[4].Replace("%20", " ").Replace("/", "");
+                val = val.TrimEnd('/');
+                string file = string.Empty;
+                string clientSite = $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : ":" + uri.Port)}";
+                int i = 0;
+                string client = string.Empty;
+                foreach (string segment in segments.Take(segments.Length - 1))
+                {
+                    if (i <= 3)
+                    {
+                        clientSite += segment;
+                    }
+                    if (i > 4)
+                    {
+                        file += segment.Replace("%20", " ");
+                    }
+                    i++;
+                }
+
+                file = file + Path.GetFileName(doc.FullPath); ;
+
+                bool InstitutionLibraryFilter = Enum.IsDefined(typeof(InstitutionLibrary), val);
+                string res = string.Empty;
+
+                Enum.TryParse<InstitutionLibrary>(val, out InstitutionLibrary library);
+                _logger.AddMethodName().Information("Filter Library {InstitutionLibraryFilter} for  {url}", doc.FullPath, InstitutionLibraryFilter);
+                switch (val)
+                {
+                    case "Placements":
+                        res = await ProcessArchive<PlacementDocumentV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    case "AccountManagement":
+                        res = await ProcessArchive<AccountManagementV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    case "Transactions":
+                        res = await ProcessArchive<TransactionDocumentV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    case "Policies":
+                        res = await ProcessArchive<PolicyDocumentV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    case "Fiduciary":
+                        res = await ProcessArchive<FiduciaryDocumentV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    case "Claims":
+                        res = await ProcessArchive<ClaimDocumentV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    case "Projects":
+                        res = await ProcessArchive<ProjectDocumentV1>(doc, file, clientSite, country, clientId, location, library, LimitVersion, DeleteSource);
+                        break;
+                    default:
+                        await _postgresRepository.UpdateArchiveQueueStatusByIdAsync(doc.id, "The requested resource library was not found", "Failed");
+                        throw new HttpStatusCodeException(404, "The requested resource library was not found.");
+                }
+                await _postgresRepository.UpdateArchiveQueueStatusByIdAsync(doc.id, "", "Success");
+                return res;
+            }
+            catch (HttpStatusCodeException ex)
+            {
+                await _postgresRepository.UpdateArchiveQueueStatusByIdAsync(doc.id, "Error --" + ex.Message, "Failed");
+                _logger.AddMethodName().Error($"Error to process file path : {0} exception : {1}", doc.FullPath, ex.Message);
+                throw new HttpStatusCodeException(ex.StatusCode, ex.Message);
+            }
+        }
+
+        public async Task<string> ProcessArchive<T>(ArchiveQueueDetails_Item doc, string file, string clientSite, string country, string clientId, string location, InstitutionLibrary library, bool LimitVersion, bool DeleteSource) where T : class, IDocumentModel
+        {
+            try
+            {
+                const int NoResult = 0;
+                DriveItemVersionCollectionResponse files;
+                try
+                {
+                    files = await GetFileVersions(doc.FullPath);
+                }
+                catch (Exception ex)
+                {
+                    throw new HttpStatusCodeException(404, "The requested resource was not found.");
+                }
+                var contentType = await GetContentType<T>(doc.FullPath, library, file, clientSite);
+                List<MShareArchive> mDataList = await GetFileMetaInfoAsync<T>(
+                                clientSite,
+                                library,
+                                    doc.FullPath, "/" + location + "/", file, clientId, country, LimitVersion, contentType);
+                PutObjectResponse metadataResponse = null;
+                bool duplicate = await _s3Repository.ExistObjectAsync(country + "/" + clientId + "/" + location + "/" + file);
+                if (duplicate)
+                {
+                    _logger.AddMethodName().Information("File {FileUrl} already uploaded", doc.FullPath);
+                    return "document is already uploaded in S3 bucket";
+                }
+                if (files.Value.Count > 1 && LimitVersion)
+                {
+                    var fileCount = files.Value.Count;
+                    var latestVersion = files.Value
+                        .OrderByDescending(v => v.LastModifiedDateTime)
+                        .FirstOrDefault();
+                    var delName = string.Empty;
+                    int index = mDataList.Count() - 1;
+                    foreach (var fileVersion in files.Value.AsEnumerable().Reverse())
+                    {
+                        //----------------------File Download--------------------------------------------------
+                        var (fileStm, name) = await DownloadFileByUrlAsync(doc.FullPath, fileVersion.Id, fileVersion.Id == latestVersion.Id ? true : false);
+
+                        using (fileStm)
+                        {
+                            //----------------------File Upload--------------------------------------------------
+                            string docModifiedDate = string.Empty; // fileVersion.LastModifiedDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? null;
+                            metadataResponse = await _s3Repository.S3UploadAsync(fileStm, country + "/" + clientId + "/" + location + "/" + file, doc.FullPath, docModifiedDate);
+                            _logger.AddMethodName().Information("File {0} version {1} uploaded.", name, metadataResponse.VersionId);
+
+                            var mData = mDataList[index];
+                            mData.VersionId = metadataResponse.VersionId;
+                            mData.IsPublishedVersion = index == 0 ? true : false;
+                            mData.PublishedObjectId = index == 0 ? null : mDataList[(int)mDataList.Count() - 1].ObjectID;
+
+                            var res = await _postgresRepository.InsertDataAsync(mData);
+                            if (res <= NoResult)
+                            {
+                                _logger.AddMethodName().Information("Document {0} is deleted from SharePoint", name);
+                                throw new HttpStatusCodeException(500, "Record is not inserted in the database.");
+                            }
+                        }
+                        index--;
+                    }
+                    _logger.AddMethodName().Information("Metadata insert completed");
+                    if (DeleteSource)
+                    {
+                        var chk = await _s3Repository.ExistObjectAsync(country + "/" + clientId + "/" + location + "/" + file);
+                        if (chk)
+                        {
+                            var delRes = await SoftDeleteDocument(clientSite, library, doc.FullPath, location, delName);
+                            if (!delRes)
+                            {
+                                throw new Exception($"getting error to file delete plz check file");
+                            }
+                            _logger.AddMethodName().Information("Document deleted from SharePoint");
+                        }
+                    }
+                }
+                else
+                {
+                    var latestVersion = files.Value
+                        .OrderByDescending(v => v.LastModifiedDateTime)
+                        .FirstOrDefault();
+                    //----------------------File Download--------------------------------------------------
+                    var (fileStm, name) = await DownloadFileByUrlAsync(doc.FullPath, latestVersion.Id, true);
+
+                    using (fileStm)
+                    {
+                        //----------------------File Upload--------------------------------------------------
+                        string docModifiedDate = string.Empty; // latestVersion.LastModifiedDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? null;
+                        metadataResponse = await _s3Repository.S3UploadAsync(fileStm, country + "/" + clientId + "/" + location + "/" + file, doc.FullPath, docModifiedDate);
+                        _logger.AddMethodName().Information("File {0} uploaded.", name);
+
+                        var mData = mDataList[mDataList.Count() - 1];
+                        mData.VersionId = metadataResponse.VersionId;
+                        mData.IsPublishedVersion = true;
+                        mData.PublishedObjectId = null;
+
+                        var res = await _postgresRepository.InsertDataAsync(mData);
+                        if (res <= NoResult)
+                        {
+                            _logger.AddMethodName().Warning("Document deleted from SharePoint");
+                            throw new HttpStatusCodeException(500, "Record is not inserted in the database.");
+                        }
+
+                        _logger.AddMethodName().Information("Metadata insert completed");
+                        if (DeleteSource)
+                        {
+                            var chk = await _s3Repository.ExistObjectAsync(country + "/" + clientId + "/" + location + "/" + file);
+                            if (chk)
+                            {
+                                var delRes = await SoftDeleteDocument(clientSite, library, doc.FullPath, location, name);
+                                if (!delRes)
+                                {
+                                    throw new Exception($"getting error to file delete plz check file");
+                                }
+                                _logger.AddMethodName().Information("Document deleted from SharePoint");
+                            }
+                        }
+                    }
+
+                }
+
+                return "document is uploaded";
+            }
+            catch (HttpStatusCodeException ex)
+            {
+                _logger.AddMethodName().Error("Http Status error caught processing archives exception : {0}", ex);
+                throw new HttpStatusCodeException(404, ex.Message);
+            }
+        }
     }
 }

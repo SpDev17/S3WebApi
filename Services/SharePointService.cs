@@ -47,5 +47,10 @@ namespace S3WebApi.Services
         {
             return await _sharePointRepository.SoftDeleteDocument(contextUrl, library, itemPath, location, item);
         }
+
+        public async Task<string> StartArchive(ArchiveQueueDetails_Item doc, string country, bool limitVersion, bool deleteSource)
+        {
+            return await _sharePointRepository.StartArchive(doc, country, limitVersion, deleteSource);
+        }
     }
 }

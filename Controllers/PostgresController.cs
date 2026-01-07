@@ -3,7 +3,6 @@ using S3WebApi.APIRoutes;
 using S3WebApi.Helpers;
 using S3WebApi.Interfaces;
 using S3WebApi.Models;
-using S3WebApi.Models.Common;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Text;
@@ -43,7 +42,7 @@ namespace S3WebApi.Controllers
                     if (resultPermission.Count == 0)
                     {
                         _logger.AddMethodName().Information("You do not have sufficient permission, Please contact administrator");
-                        return ApiResponseHelper.BadRequest("You do not have sufficient permission, Please contact administrator.");
+                        return ApiResponseHelper.Unauthorized("You do not have sufficient permission, Please contact administrator.");
                     }
                     var permissionCommaSeparated = string.Join(", ", resultPermission.Select(g => $"'Group: {g.Title}'"));
                     MetadataResult result = await _postgresService.GetMedatadataDynamicAsync(conditions, permissionCommaSeparated);
@@ -269,7 +268,7 @@ namespace S3WebApi.Controllers
             });
         }
 
-        [HttpGet("GetDocVersionsById/{id}")]
+        [HttpGet("versions/{id}")]
         public async Task<IActionResult> GetDocumentVersionsById([Required] string id)
         {            
             if (!Guid.TryParse(id, out Guid validGuid))
@@ -297,7 +296,7 @@ namespace S3WebApi.Controllers
             }
         }
 
-        [HttpPost("downloadfile")]
+        [HttpPost("download")]
         public async Task<IActionResult> DownloadFileStreamAsync([FromBody] FileDownloadRequest request)
         {
             _logger.AddMethodName().Information("DownloadFileStreamAsync method called with request: {@Request}", request);
@@ -312,7 +311,7 @@ namespace S3WebApi.Controllers
                 }
 
                 string siteUrl = request.SiteURL + request.Client_ID;
-                // string siteUrl = "https://yddr5.sharepoint.com/sites/MRSH-MShareDev-INST-GB001/" + request.ClientID;
+                // string siteUrl = "https://devmmcglobal.sharepoint.com/sites/MRSH-MShareDev-INST-GB001/" + request.ClientID;
                 List<SPGroupResponse> resultPermission = await _sharePointService.GetSPGroupList(siteUrl, request.Email_ID);
 
                 if (resultPermission is not null && resultPermission?.Count > 0)

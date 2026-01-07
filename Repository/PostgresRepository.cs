@@ -24,7 +24,6 @@ namespace S3WebApi.Repository
             _settings = configuration.GetSection("ConnectionStrings").Get<PostgresConnection>();
             _authSecret.Certificates.TryGetValue(_settings.PostgreSqlConnection, out var _connectionStrings);
             _connectionString = _connectionStrings;
-            //_connectionString = "Host=10.178.164.102;Port=5432;Database=mshareArchivalDB;Username=postgres;Password=mmc@123";
         }
 
         private IDbConnection Connection => new NpgsqlConnection(_connectionString);
@@ -33,16 +32,16 @@ namespace S3WebApi.Repository
         {
             _logger.AddMethodName().Information("InsertDataAsync called with MShareArchive object: {@MShareArchive}", mData);
             try
-            {
-
+            { 
                 using (
                     var conn = new NpgsqlConnection(_connectionString))
                 {
                     int rowAffected = 0;
                     conn.Open();
                     var sql = @"Insert into public.mshare_archive(object_id, client_id, content_type, document_type_metadata, extended_metadata, date_of_archival, security_info, document_archive_location, storage_location, country, bucket_name, file_name, library_name, doc_created_date, doc_modified_date, version_id, ispublished_version, published_object_id)";
-                    sql += " Values(@object_id, @client_id, @content_type, @document_type_metadata, @extended_metadata, CAST(@date_of_archival AS timestamp), @security_info, @document_archive_location, @storage_location, @country, @bucket_name, @file_name, @library_name, TO_TIMESTAMP(@doc_created_date::text, 'MM/DD/YYYY HH12:MI:SS PM'), TO_TIMESTAMP(@doc_modified_date::text, 'MM/DD/YYYY HH12:MI:SS PM'), @version_id, @ispublished_version, @published_object_id)";
-
+                    //sql += " Values(@object_id, @client_id, @content_type, @document_type_metadata, @extended_metadata, CAST(@date_of_archival AS timestamp), @security_info, @document_archive_location, @storage_location, @country, @bucket_name, @file_name, @library_name, TO_TIMESTAMP(@doc_created_date::text, 'MM/DD/YYYY HH12:MI:SS PM'), TO_TIMESTAMP(@doc_modified_date::text, 'MM/DD/YYYY HH12:MI:SS PM'), @version_id, @ispublished_version, @published_object_id)";
+                    sql += " Values(@object_id, @client_id, @content_type, @document_type_metadata, @extended_metadata, CAST(@date_of_archival AS timestamp), @security_info, @document_archive_location, @storage_location, @country, @bucket_name, @file_name, @library_name, TO_TIMESTAMP(@doc_created_date::text, 'MM/DD/YYYY HH24:MI:SS'), TO_TIMESTAMP(@doc_modified_date::text, 'MM/DD/YYYY HH24:MI:SS'), @version_id, @ispublished_version, @published_object_id)";
+ 
                     using (var cmd = new NpgsqlCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("object_id", NpgsqlDbType.Text, (object?)mData.ObjectID ?? DBNull.Value);
@@ -63,15 +62,14 @@ namespace S3WebApi.Repository
                         cmd.Parameters.AddWithValue("version_id", NpgsqlDbType.Text, (object?)mData.VersionId ?? DBNull.Value);
                         cmd.Parameters.AddWithValue("ispublished_version", NpgsqlDbType.Boolean, mData.IsPublishedVersion);
                         cmd.Parameters.AddWithValue("published_object_id", NpgsqlDbType.Text, (object?)mData.PublishedObjectId ?? DBNull.Value);
-
-
+  
                         rowAffected = cmd.ExecuteNonQuery();
                     }
                     _logger.AddMethodName().Information("InsertDataAsync completed successfully, rows affected: {RowAffected}", rowAffected);
                     return rowAffected;
-
+ 
                 }
-
+ 
             }
             catch (Exception ex)
             {
@@ -137,7 +135,7 @@ namespace S3WebApi.Repository
                 "ispublished_version = true",
                 "AND client_id = @ClientId"
             };
-
+            
             parameters.Add("ClientId", searchCriteria.Client_ID.Trim());
 
             // Date filters
@@ -181,9 +179,9 @@ namespace S3WebApi.Repository
             ";
 
             // Add pagination parameters
-            int offset = (Convert.ToInt32(searchCriteria.PageNo) - 1) * Convert.ToInt32(searchCriteria.Limit);
+            int offset = (searchCriteria.PageNo - 1) * searchCriteria.Limit;
             parameters.Add("Offset", offset);
-            parameters.Add("Limit", Convert.ToInt32(searchCriteria.Limit));
+            parameters.Add("Limit", searchCriteria.Limit);
 
             using var conn = Connection;
             var records = await conn.QueryAsync<dynamic>(sql, parameters);
@@ -297,7 +295,7 @@ namespace S3WebApi.Repository
         public async Task<bool> GetPermissionByURL(FileDownloadRequest fileReq, List<SPGroupResponse> permissions)
         {
             _logger.AddMethodName().Information("GetPermissionByURL called with Permissions: {@permissions}", permissions);
-
+            
             // Extract permission titles without manual quoting
             var permissionValues = permissions.Select(g => $"Group: {g.Title}").ToArray();
 
@@ -363,7 +361,7 @@ namespace S3WebApi.Repository
         }
 
         public async Task<IEnumerable<dynamic>> GetArchiveQueueAsync(string jobId, int limit)
-        {
+        {            
             var sql = @"
             SELECT 
                 ""CompanyNo"",
